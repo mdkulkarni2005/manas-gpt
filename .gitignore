@@ -22,5 +22,5 @@ config.json
 *.pkl
 *.h5
 
-# Ignore security file
-security.py
+# # Ignore security file
+# security.py
