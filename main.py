@@ -84,11 +84,11 @@ st.markdown("""
                 <img src="https://img.icons8.com/ios/50/ffffff/github.png" alt="GitHub" style="vertical-align: middle; height: 25px;"/>
                 GitHub
             </a>
-            <a href="https://www.linkedin.com/in/mdkulkarni2005" target="_blank">
+            <a href="https://www.linkedin.com/in/manas-kulkarni-44045229a/" target="_blank">
                 <img src="https://img.icons8.com/ios/50/ffffff/linkedin.png" alt="LinkedIn" style="vertical-align: middle; height: 25px;"/>
                 LinkedIn
             </a>
-            <a href="https://yourwebsite.com" target="_blank">
+            <a href="https://manas-kulkarni.vercel.app/" target="_blank">
                 <img src="https://img.icons8.com/ios/50/ffffff/domain.png" alt="Website" style="vertical-align: middle; height: 25px;"/>
                 Website
             </a>
