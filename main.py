@@ -5,7 +5,7 @@ import json
 import datetime
 from security import verify_deployment
 
-# verify_deployment()
+verify_deployment()
 
 desiredModel = "deepseek-r1:8b"
 
