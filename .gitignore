@@ -1,0 +1,26 @@
+# Ignore virtual environments
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Ignore IDE and system-specific files
+.DS_Store
+.vscode/
+.idea/
+
+# Ignore user-uploaded files and logs
+uploads/
+logs/
+*.log
+
+# Ignore secrets and configuration files
+config.json
+.env
+
+# Ignore cached model files (if any)
+*.pkl
+*.h5
+
+# Ignore security file
+security.py
