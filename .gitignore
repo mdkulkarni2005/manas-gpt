@@ -13,6 +13,7 @@ __pycache__/
 uploads/
 logs/
 *.log
+security.py
 
 # Ignore secrets and configuration files
 config.json
@@ -21,6 +22,3 @@ config.json
 # Ignore cached model files (if any)
 *.pkl
 *.h5
-
-# Ignore security file
-security.py
