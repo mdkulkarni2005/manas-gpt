@@ -104,6 +104,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize session state
+st.markdown(f"""
+    <div class="header">
+        <h1>Manas-GPT</h1>
+    </div>
+""", unsafe_allow_html=True)
 if "chats" not in st.session_state:
     st.session_state.chats = {"Default Chat": []}
 if "current_chat" not in st.session_state:
