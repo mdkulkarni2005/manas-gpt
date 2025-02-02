@@ -71,5 +71,5 @@ For permissions and inquiries:
 - Repository: [manas-gpt](https://github.com/mdkulkarni2005/manas-gpt)
 
 ---
-© 2024 Manas D. Kulkarni - All Rights Reserved  
+© 2025 Manas D. Kulkarni - All Rights Reserved  
 Digital Signature: `manas.d.kulkarni`

@@ -7,7 +7,7 @@ AUTHOR_SIGNATURE = """
 * Created by: Manas D. Kulkarni
 * Digital Signature: manas.d.kulkarni
 * GitHub: https://github.com/mdkulkarni2005/manas-gpt
-* Copyright © 2024 - All Rights Reserved
+* Copyright © 2025 - All Rights Reserved
 */
 """
 

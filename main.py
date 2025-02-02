@@ -3,163 +3,217 @@ import ollama
 import os
 import json
 import datetime
+import base64
+from PIL import Image
+import pytesseract
+import fitz  # PyMuPDF
 from security import verify_deployment
 
 verify_deployment()
 
 desiredModel = "deepseek-r1:8b"
 
-# Set page config with menu items for help, bug report, and about
+# Set page config
 st.set_page_config(
     page_title="Manas-GPT | AI Chat Assistant",
-    page_icon=":robot_face:",
-    layout="centered",
-    menu_items={
-        'Get Help': 'https://github.com/mdkulkarni2005/manas-gpt',
-        'Report a bug': "https://github.com/mdkulkarni2005/manas-gpt/issues",
-        'About': f"Created by Manas D. Kulkarni - {datetime.datetime.now().year}"
-    }
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern UI/UX design
+# Enhanced CSS for modern UI/UX design
 st.markdown("""
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f4f4f4;
+        /* Modern Chat Interface */
+        .stTextArea textarea {
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            font-size: 16px;
+            transition: all 0.3s ease;
         }
-        .header {
+        .stTextArea textarea:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        /* Chat Messages */
+        .chat-message {
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .user-message {
+            background-color: #E3F2FD;
+            margin-left: 2rem;
+        }
+        .assistant-message {
+            background-color: #F5F5F5;
+            margin-right: 2rem;
+        }
+        
+        /* Buttons */
+        .stButton button {
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
             background-color: #1a73e8;
-            padding: 20px 0;
-            border-radius: 8px;
             color: white;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
-        .header h2 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-        .header p {
-            font-size: 1.1em;
-            margin-top: 0;
-        }
-        .header a {
-            text-decoration: none;
-            color: white;
-            padding: 10px;
-            margin: 0 15px;
-            font-size: 1.2em;
-            border-radius: 5px;
-            transition: background-color 0.3s, transform 0.3s;
-        }
-        .header a:hover {
-            background-color: #0f59c1;
+        .stButton button:hover {
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        .footer {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
+        
+        /* File Upload */
+        .upload-container {
+            border: 2px dashed #1a73e8;
+            border-radius: 15px;
+            padding: 20px;
             text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s ease;
         }
-        .footer a {
+        .upload-container:hover {
+            background-color: rgba(26, 115, 232, 0.05);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Sidebar */
+        .css-1d391kg {
+            background-color: #f8f9fa;
+        }
+        
+        /* Chat Title */
+        .chat-title {
+            font-size: 1.2rem;
             color: #1a73e8;
-            text-decoration: none;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #1a73e8;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# Header with custom design
-st.markdown("""
-    <div class="header">
-        <h2>Manas-GPT | AI Chat Assistant</h2>
-        <p>
-            <a href="https://github.com/mdkulkarni2005/manas-gpt" target="_blank">
-                <img src="https://img.icons8.com/ios/50/ffffff/github.png" alt="GitHub" style="vertical-align: middle; height: 25px;"/>
-                GitHub
-            </a>
-            <a href="https://www.linkedin.com/in/manas-kulkarni-44045229a/" target="_blank">
-                <img src="https://img.icons8.com/ios/50/ffffff/linkedin.png" alt="LinkedIn" style="vertical-align: middle; height: 25px;"/>
-                LinkedIn
-            </a>
-            <a href="https://manas-kulkarni.vercel.app/" target="_blank">
-                <img src="https://img.icons8.com/ios/50/ffffff/domain.png" alt="Website" style="vertical-align: middle; height: 25px;"/>
-                Website
-            </a>
-        </p>
-    </div>
-""", unsafe_allow_html=True)
-
+# Initialize session state
 if "chats" not in st.session_state:
     st.session_state.chats = {"Default Chat": []}
 if "current_chat" not in st.session_state:
     st.session_state.current_chat = "Default Chat"
+if "file_uploads" not in st.session_state:
+    st.session_state.file_uploads = {}
 
-# Sidebar section for chat management
-st.sidebar.title("Chat Management")
-chat_name = st.sidebar.text_input("New Chat Name", "")
-if st.sidebar.button("Create Chat") and chat_name:
-    st.session_state.chats[chat_name] = []
-    st.session_state.current_chat = chat_name
+def process_file(file):
+    """Process uploaded files and extract text content."""
+    file_type = file.type
+    content = ""
+    
+    try:
+        if file_type.startswith('image'):
+            image = Image.open(file)
+            content = pytesseract.image_to_string(image)
+        elif file_type == 'application/pdf':
+            pdf = fitz.open(stream=file.read(), filetype="pdf")
+            for page in pdf:
+                content += page.get_text()
+        else:
+            content = file.read().decode('utf-8')
+        return content
+    except Exception as e:
+        return f"Error processing file: {str(e)}"
 
-delete_chat = st.sidebar.selectbox("Delete Chat", ["Select"] + list(st.session_state.chats.keys()))
-if st.sidebar.button("Delete") and delete_chat != "Select":
-    del st.session_state.chats[delete_chat]
-    st.session_state.current_chat = "Default Chat"
-
-selected_chat = st.sidebar.radio("Select Chat", list(st.session_state.chats.keys()))
-st.session_state.current_chat = selected_chat
-
-def generate_response(questionToAsk):
-    """Function to generate streamed response from the LLM."""
+def generate_response(question, file_content=None):
+    """Enhanced response generation with file content support."""
     response_container = st.empty()
     full_response = ""
     
-    with st.spinner("Generating response..."):
-        chat_history = st.session_state.chats.get(st.session_state.current_chat, [])
+    with st.spinner("Processing..."):
+        # Prepare context with file content if available
+        if file_content:
+            question = f"Context from uploaded file:\n{file_content}\n\nQuestion: {question}"
+        
+        chat_history = st.session_state.chats[st.session_state.current_chat]
         response = ollama.chat(
             model=desiredModel,
-            messages=chat_history + [{'role': 'user', 'content': questionToAsk}],
-            stream=True,
+            messages=chat_history + [{'role': 'user', 'content': question}],
+            stream=True
         )
         
         for chunk in response:
             full_response += chunk['message']['content']
-            response_container.markdown(f"**{full_response}**")
+            response_container.markdown(f"{full_response}", unsafe_allow_html=True)
     
-    response_container.markdown(f"**{full_response}**")
+    # Save to chat history
+    st.session_state.chats[st.session_state.current_chat].extend([
+        {'role': 'user', 'content': question},
+        {'role': 'assistant', 'content': full_response}
+    ])
+
+# Sidebar for chat management
+with st.sidebar:
+    st.title("💬 Chat Management")
     
-    st.session_state.chats[st.session_state.current_chat].append({'role': 'user', 'content': questionToAsk})
-    st.session_state.chats[st.session_state.current_chat].append({'role': 'assistant', 'content': full_response})
+    # Create new chat
+    new_chat = st.text_input("Create New Chat", placeholder="Enter chat name...")
+    if st.button("Create Chat") and new_chat:
+        st.session_state.chats[new_chat] = []
+        st.session_state.current_chat = new_chat
+        st.experimental_rerun()
+    
+    # Select chat
+    st.subheader("Select Chat")
+    for chat in st.session_state.chats.keys():
+        if st.sidebar.button(chat, key=f"select_{chat}"):
+            st.session_state.current_chat = chat
+            st.experimental_rerun()
+    
+    # Export chat
+    if st.button("Export Chat History"):
+        chat_data = json.dumps(st.session_state.chats, indent=4)
+        b64 = base64.b64encode(chat_data.encode()).decode()
+        href = f'<a href="data:text/json;base64,{b64}" download="chat_history.json">Download Chat History</a>'
+        st.markdown(href, unsafe_allow_html=True)
 
-# Form for user input and question submission
-with st.form("chat_form"):
-    user_input = st.text_area("Ask your question:", "Type here...")
-    submitted = st.form_submit_button("Submit")
-    if submitted and user_input.strip():
-        st.chat_message("user").markdown(user_input)
-        st.chat_message("assistant")
-        generate_response(user_input)
+# Main chat interface
+st.title(f"Current Chat: {st.session_state.current_chat}")
 
-# Sidebar for additional features
-st.sidebar.subheader("Additional Features")
-if st.sidebar.button("Clear Chat History"):
+# Display chat history
+for message in st.session_state.chats[st.session_state.current_chat]:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# File upload
+uploaded_file = st.file_uploader("Upload a file (Images, PDFs, Text files)", 
+                               type=['png', 'jpg', 'jpeg', 'pdf', 'txt'])
+
+# Chat input
+with st.form(key="chat_form"):
+    user_input = st.text_area("Type your message:", key="user_input")
+    col1, col2 = st.columns([1, 5])
+    
+    with col1:
+        submit = st.form_submit_button("Send")
+    
+    if submit and user_input:
+        file_content = None
+        if uploaded_file:
+            file_content = process_file(uploaded_file)
+        
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        
+        with st.chat_message("assistant"):
+            generate_response(user_input, file_content)
+
+# Clear chat button
+if st.button("Clear Chat"):
     st.session_state.chats[st.session_state.current_chat] = []
     st.experimental_rerun()
-if st.sidebar.button("Export Chat History"):
-    chat_data = json.dumps(st.session_state.chats, indent=4)
-    st.sidebar.download_button("Download Chat History", chat_data, file_name="chat_history.json")
-
-# Footer for copyright and GitHub link
-st.markdown("""
-    <div class="footer">
-        © 2024 Manas D. Kulkarni - All Rights Reserved<br>
-        <a href='https://github.com/mdkulkarni2005/manas-gpt'>GitHub Repository</a>
-    </div>
-""", unsafe_allow_html=True)
